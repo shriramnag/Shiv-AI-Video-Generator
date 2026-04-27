@@ -1,0 +1,17 @@
+torch>=2.4.0
+torchvision
+transformers>=4.45.0
+diffusers>=0.30.3
+accelerate>=0.34.2
+huggingface_hub>=0.25.0
+sentencepiece
+beautifulsoup4
+gradio>=4.44.0
+opencv-python
+imageio
+imageio-ffmpeg
+numpy<2.0.0
+ftfy
+safetensors
+peft
+

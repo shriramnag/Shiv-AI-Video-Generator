@@ -111,6 +111,21 @@ For more details, please see our [blog post](https://website.ltx.video/blog/intr
 
 ## July, 8th, 2025: New Control Models Released!
 - Released three new control models for Shiv-AI-Video-Generator on HuggingFace:
+# 🚀 Shiv-AI-Video-Generator (Official)
+**Owner: Shri Ram Nag** | **Powered by Shiv AI Engine**
+
+यह एक एडवांस AI वीडियो जनरेशन टूल है जो टेक्स्ट से हाई-क्वालिटी वीडियो बनाता है।
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/shriramnag/Shiv-AI-Video-Generator/blob/main/Shiv_AI_Master_Notebook.ipynb)
+
+## 🛠 मुख्य फीचर्स
+* **Turbo Speed:** बहुत तेज़ी से वीडियो जनरेशन।
+* **Hugging Face Integration:** सीधे आपके रिपॉजिटरी से मॉडल लोड होता है।
+* **Web UI:** HTML/CSS आधारित सुंदर इंटरफेस।
+
+## 🔗 जरूरी लिंक्स
+* **Model:** [Hugging Face Repository](https://huggingface.co/Shriramnag/Shiv-AI-Video-Generator)
+* **YouTube:** [PAISAWALA20](https://www.youtube.com/@PAISAWALA20)
     * **Depth Control**: [Shiv-AI-Video-Generator-ICLoRA-depth-13b-0.9.7](https://huggingface.co/Shri Ram Nag/Shiv-AI-Video-Generator-ICLoRA-depth-13b-0.9.7)
     * **Pose Control**: [Shiv-AI-Video-Generator-ICLoRA-pose-13b-0.9.7](https://huggingface.co/Shri Ram Nag/Shiv-AI-Video-Generator-ICLoRA-pose-13b-0.9.7)
     * **Canny Control**: [Shiv-AI-Video-Generator-ICLoRA-canny-13b-0.9.7](https://huggingface.co/Shri Ram Nag/Shiv-AI-Video-Generator-ICLoRA-canny-13b-0.9.7)
@@ -128,105 +143,6 @@ For more details, please see our [blog post](https://website.ltx.video/blog/intr
 
 ## May, 5th, 2025: New model 13B v0.9.7:
 - Release a new 13B model [ltxv-13b-0.9.7-dev](https://huggingface.co/Shri Ram Nag/Shiv-AI-Video-Generator/blob/main/ltxv-13b-0.9.7-dev.safetensors)
-- Release a new quantized model [ltxv-13b-0.9.7-dev-fp8](https://huggingface.co/Shri Ram Nag/Shiv-AI-Video-Generator/blob/main/ltxv-13b-0.9.7-dev-fp8.safetensors) for faster inference with less VRam
-- Release a new upscalers
-  * [ltxv-temporal-upscaler-0.9.7](https://huggingface.co/Shri Ram Nag/Shiv-AI-Video-Generator/blob/main/ltxv-temporal-upscaler-0.9.7.safetensors)
-  * [ltxv-spatial-upscaler-0.9.7](https://huggingface.co/Shri Ram Nag/Shiv-AI-Video-Generator/blob/main/ltxv-spatial-upscaler-0.9.7.safetensors)
-- Breakthrough prompt adherence and physical understanding.
-- New Pipeline for multi-scale video rendering for fast and high quality results
-
-
-## April, 15th, 2025: New checkpoints v0.9.6:
-- Release a new checkpoint [ltxv-2b-0.9.6-dev-04-25](https://huggingface.co/Shri Ram Nag/Shiv-AI-Video-Generator/blob/main/ltxv-2b-0.9.6-dev-04-25.safetensors) with improved quality
-- Release a new distilled model [ltxv-2b-0.9.6-distilled-04-25](https://huggingface.co/Shri Ram Nag/Shiv-AI-Video-Generator/blob/main/ltxv-2b-0.9.6-distilled-04-25.safetensors)
-    * 15x faster inference than non-distilled model.
-    * Does not require classifier-free guidance and spatio-temporal guidance.
-    * Supports sampling with 8 (recommended), or less diffusion steps.
-- Improved prompt adherence, motion quality and fine details.
-- New default resolution and FPS: 1216 × 704 pixels at 30 FPS
-    * Still real time on H100 with the distilled model.
-    * Other resolutions and FPS are still supported.
-- Support stochastic inference (can improve visual quality when using the distilled model)
-
-## March, 5th, 2025: New checkpoint v0.9.5
-- New license for commercial use ([OpenRail-M](https://huggingface.co/Shri Ram Nag/Shiv-AI-Video-Generator/ltx-video-2b-v0.9.5.license.txt))
-- Release a new checkpoint v0.9.5 with improved quality
-- Support keyframes and video extension
-- Support higher resolutions
-- Improved prompt understanding
-- Improved VAE
-- New online web app in [LTX-Studio](https://app.ltx.studio/ltx-video)
-- Automatic prompt enhancement
-
-## February, 20th, 2025: More inference options
-- Improve STG (Spatiotemporal Guidance) for Shiv-AI-Video-Generator
-- Support MPS on macOS with PyTorch 2.3.0
-- Add support for 8-bit model, Shiv-AI-Video-GeneratorQ8
-- Add TeaCache for Shiv-AI-Video-Generator
-- Add [ComfyUI-LTXTricks](#comfyui-integration)
-- Add Diffusion-Pipe
-
-## December 31st, 2024: Research paper
-- Release the [research paper](https://arxiv.org/abs/2501.00103)
-
-## December 20th, 2024: New checkpoint v0.9.1
-- Release a new checkpoint v0.9.1 with improved quality
-- Support for STG / PAG
-- Support loading checkpoints of Shiv-AI-Video-Generator in Diffusers format (conversion is done on-the-fly)
-- Support offloading unused parts to CPU
-- Support the new timestep-conditioned VAE decoder
-- Reference contributions from the community in the readme file
-- Relax transformers dependency
-
-## November 21th, 2024: Initial release v0.9.0
-- Initial release of Shiv-AI-Video-Generator
-- Support text-to-video and image-to-video generation
-
-
-# Models
-
-| Name                    | Notes                                                                                      | inference.py config                                                                                                                                      | ComfyUI workflow (Recommended) |
-|-------------------------|--------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------|
-| ltxv-13b-0.9.8-dev                   | Highest quality, requires more VRAM                                                        | [ltxv-13b-0.9.8-dev.yaml](https://github.com/Shri Ram Nag/Shiv-AI-Video-Generator/blob/main/configs/ltxv-13b-0.9.8-dev.yaml)                                             | [ltxv-13b-i2v-base.json](https://github.com/Shri Ram Nag/ComfyUI-LTXVideo/blob/master/example_workflows/ltxv-13b-i2v-base.json)             |
-| [ltxv-13b-0.9.8-mix](https://app.ltx.studio/motion-workspace?videoModel=ltxv-13b)            | Mix ltxv-13b-dev and ltxv-13b-distilled in the same multi-scale rendering workflow for balanced speed-quality | N/A                                             | [ltxv-13b-i2v-mixed-multiscale.json](https://github.com/Shri Ram Nag/ComfyUI-LTXVideo/blob/master/example_workflows/ltxv-13b-i2v-mixed-multiscale.json)             |
- [ltxv-13b-0.9.8-distilled](https://app.ltx.studio/motion-workspace?videoModel=ltxv)        | Faster, less VRAM usage, slight quality reduction compared to 13b. Ideal for rapid iterations | [ltxv-13b-0.9.8-distilled.yaml](https://github.com/Shri Ram Nag/Shiv-AI-Video-Generator/blob/main/configs/ltxv-13b-0.9.8-distilled.yaml)                                    | [ltxv-13b-dist-i2v-base.json](https://github.com/Shri Ram Nag/ComfyUI-LTXVideo/blob/master/example_workflows/13b-distilled/ltxv-13b-dist-i2v-base.json) |
-ltxv-2b-0.9.8-distilled        | Smaller model, slight quality reduction compared to 13b distilled. Ideal for fast generation with light VRAM usage | [ltxv-2b-0.9.8-distilled.yaml](https://github.com/Shri Ram Nag/Shiv-AI-Video-Generator/blob/main/configs/ltxv-2b-0.9.8-distilled.yaml)                                    | N/A |
-| ltxv-13b-0.9.8-dev-fp8               | Quantized version of ltxv-13b | [ltxv-13b-0.9.8-dev-fp8.yaml](https://github.com/Shri Ram Nag/Shiv-AI-Video-Generator/blob/main/configs/ltxv-13b-0.9.8-dev-fp8.yaml) | [ltxv-13b-i2v-base-fp8.json](https://github.com/Shri Ram Nag/ComfyUI-LTXVideo/blob/master/example_workflows/ltxv-13b-i2v-base-fp8.json) |
-| ltxv-13b-0.9.8-distilled-fp8     | Quantized version of ltxv-13b-distilled | [ltxv-13b-0.9.8-distilled-fp8.yaml](https://github.com/Shri Ram Nag/Shiv-AI-Video-Generator/blob/main/configs/ltxv-13b-0.9.8-distilled-fp8.yaml) | [ltxv-13b-dist-i2v-base-fp8.json](https://github.com/Shri Ram Nag/ComfyUI-LTXVideo/blob/master/example_workflows/13b-distilled/ltxv-13b-dist-i2v-base-fp8.json) |
-| ltxv-2b-0.9.8-distilled-fp8     | Quantized version of ltxv-2b-distilled | [ltxv-2b-0.9.8-distilled-fp8.yaml](https://github.com/Shri Ram Nag/Shiv-AI-Video-Generator/blob/main/configs/ltxv-2b-0.9.8-distilled-fp8.yaml) | N/A |
-| ltxv-2b-0.9.6                     | Good quality, lower VRAM requirement than ltxv-13b                                         | [ltxv-2b-0.9.6-dev.yaml](https://github.com/Shri Ram Nag/Shiv-AI-Video-Generator/blob/main/configs/ltxv-2b-0.9.6-dev.yaml)                                                 | [ltxvideo-i2v.json](https://github.com/Shri Ram Nag/ComfyUI-LTXVideo/blob/master/example_workflows/low_level/ltxvideo-i2v.json)             |
-| ltxv-2b-0.9.6-distilled         | 15× faster, real-time capable, fewer steps needed, no STG/CFG required                     | [ltxv-2b-0.9.6-distilled.yaml](https://github.com/Shri Ram Nag/Shiv-AI-Video-Generator/blob/main/configs/ltxv-2b-0.9.6-distilled.yaml)                                     | [ltxvideo-i2v-distilled.json](https://github.com/Shri Ram Nag/ComfyUI-LTXVideo/blob/master/example_workflows/low_level/ltxvideo-i2v-distilled.json)             |
-
-
-# Quick Start Guide
-
-## Online inference
-The model is accessible right away via the following links:
-- [LTX-Studio image-to-video (13B-mix)](https://app.ltx.studio/motion-workspace?videoModel=ltxv-13b)
-- [LTX-Studio image-to-video (13B distilled)](https://app.ltx.studio/motion-workspace?videoModel=ltxv)
-- [Fal.ai image-to-video (13B full)](https://fal.ai/models/fal-ai/ltx-video-13b-dev/image-to-video)
-- [Fal.ai image-to-video (13B distilled)](https://fal.ai/models/fal-ai/ltx-video-13b-distilled/image-to-video)
-- [Replicate image-to-video](https://replicate.com/lightricks/ltx-video)
-
-## Run locally
-
-### Installation
-The codebase was tested with Python 3.10.5, CUDA version 12.2, and supports PyTorch >= 2.1.2.
-On macOS, MPS was tested with PyTorch 2.3.0, and should support PyTorch == 2.3 or >= 2.6.
-
-```bash
-git clone https://github.com/Shri Ram Nag/Shiv-AI-Video-Generator.git
-cd Shiv-AI-Video-Generator
-
-# create env
-python -m venv env
-source env/bin/activate
-python -m pip install -e .\[inference\]
-```
-
-#### FP8 Kernels (optional)
-
-[FP8 kernels](https://github.com/Shri Ram Nag/LTXVideo-Q8-Kernels) developed for Shiv-AI-Video-Generator provide performance boost on supported graphics cards (Ada architecture and later). To install FP8 kernels, follow the instructions in that repository.
 
 ### Inference
 

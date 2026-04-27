@@ -1,543 +1,735 @@
-import os
-import torch
+# --------------------------------------------------
+# 🔱 SHIV AI VIDEO STUDIO PRO
+# 👤 Owner: Shri Ram Nag | 📺 PAISAWALA20
+# ✅ Works: Browser | Google Colab | VS Code Preview
+# --------------------------------------------------
+
 import gradio as gr
-from diffusers import LTXVideoPipeline, DPMSolverMultistepScheduler
-from diffusers.utils import export_to_video
-import tempfile
-import imageio
-import numpy as np
 
-# --------------------------------------------------
-# 🔱 SHIV AI VIDEO GENERATOR (PRO)
-# 👤 OWNER: SHRI RAM NAG | 📺 CHANNEL: PAISAWALA20
-# --------------------------------------------------
-
-HTML_UI = """
+HTML_UI = r"""
 <!DOCTYPE html>
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Shiv AI Video Studio</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#070a0f;--surface:#0d1117;--surface2:#111827;--border:#1e2d3d;
-  --accent:#3b82f6;--accent2:#06b6d4;--text:#f0f4f8;--muted:#64748b;
-  --success:#22c55e;
+  --bg:#05080e;--s1:#0b0f18;--s2:#111827;--bd:#1e2d40;
+  --acc:#3b82f6;--acc2:#06b6d4;--tx:#eef2f7;--mu:#556070;
+  --ok:#22c55e;--err:#ef4444;--warn:#f59e0b;
 }
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
-.studio{max-width:480px;margin:0 auto;padding:0 0 60px}
-.topbar{padding:16px 16px 0;display:flex;align-items:center;justify-content:space-between}
-.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;letter-spacing:-0.5px}
-.logo span{color:var(--accent)}
-.badge{font-size:10px;background:#1e2d3d;color:var(--accent2);padding:3px 10px;border-radius:20px;border:1px solid #1e3a4a}
-.hero{padding:22px 16px 14px}
-.hero-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1.15;letter-spacing:-1px}
-.hero-title em{font-style:normal;color:var(--accent)}
-.hero-sub{font-size:12px;color:var(--muted);margin-top:6px}
-.canvas-wrap{margin:0 16px;border-radius:14px;overflow:hidden;border:1px solid var(--border);background:var(--surface);position:relative;aspect-ratio:16/9}
-#previewCanvas{width:100%;height:100%;display:block}
-.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;pointer-events:none}
-.overlay.hidden{display:none}
-.play-icon{width:52px;height:52px;border-radius:50%;border:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center}
-.overlay-label{font-size:12px;color:var(--muted)}
-.status-bar{margin:10px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;min-height:42px}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background 0.3s}
-.dot.active{background:var(--accent);animation:pulse 1.5s infinite}
-.dot.done{background:var(--success)}
-.dot.error{background:#ef4444}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-#statusText{font-size:12px;color:var(--muted);flex:1}
-.steps{margin:10px 16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-.step{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center;transition:all 0.3s}
-.step.active{border-color:var(--accent);background:#0d1e38}
-.step.done{border-color:var(--success);background:#0a1f14}
-.step-num{font-size:10px;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;margin-bottom:3px}
-.step-label{font-size:11px;color:var(--text);font-weight:500}
-.step.done .step-label{color:var(--success)}
-.step.active .step-num{color:var(--accent)}
-.panel{margin:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden}
-.panel-head{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.panel-title{font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px}
-.panel-body{padding:14px}
-textarea{width:100%;background:#070a0f;border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:10px 12px;resize:none;outline:none;transition:border-color 0.2s;line-height:1.5}
-textarea:focus{border-color:var(--accent)}
-.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.setting{display:flex;flex-direction:column;gap:5px}
-.setting label{font-size:11px;color:var(--muted)}
-select{width:100%;background:#070a0f;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;padding:7px 10px;outline:none;cursor:pointer}
-select:focus{border-color:var(--accent)}
-input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer}
-.range-row{display:flex;align-items:center;gap:8px}
-.range-row span{font-size:11px;color:var(--accent);min-width:28px;text-align:right}
-.voices-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
-.vbtn{background:#070a0f;border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;text-align:left;transition:all 0.15s;color:var(--text)}
-.vbtn:hover{border-color:var(--accent2)}
-.vbtn.sel{border-color:var(--accent);background:#0d1e38}
-.vbtn .vn{font-size:12px;font-weight:500}
-.vbtn .vd{font-size:10px;color:var(--muted);margin-top:2px}
-.img-strip{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
-.thumb{width:88px;height:56px;border-radius:8px;border:1px solid var(--border);flex-shrink:0;background:var(--surface2);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--muted)}
-.thumb.loading{animation:shimmer 1.5s infinite}
-@keyframes shimmer{0%,100%{opacity:0.4}50%{opacity:0.9}}
-.gen-btn{width:calc(100% - 32px);margin:14px 16px 0;padding:16px;border:none;border-radius:14px;background:linear-gradient(135deg,#1d4ed8,#0ea5e9);color:white;font-family:'Syne',sans-serif;font-weight:700;font-size:16px;cursor:pointer;letter-spacing:0.3px;transition:opacity 0.2s,transform 0.1s;position:relative;overflow:hidden}
-.gen-btn:hover{opacity:0.9}
-.gen-btn:active{transform:scale(0.98)}
-.gen-btn:disabled{opacity:0.4;cursor:not-allowed}
-.shimmer{position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent);transform:translateX(-100%)}
-.gen-btn.loading .shimmer{animation:slide 1.5s infinite}
+html,body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased}
+.app{max-width:500px;margin:0 auto;padding-bottom:60px}
+
+/* Top bar */
+.topbar{padding:14px 16px 0;display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;letter-spacing:-0.5px;color:var(--tx)}
+.logo b{color:var(--acc)}
+.chip{font-size:10px;background:#0f1e30;color:var(--acc2);padding:4px 10px;border-radius:20px;border:1px solid #1a3a50;letter-spacing:0.3px}
+
+/* Hero */
+.hero{padding:18px 16px 12px}
+.ht{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;line-height:1.2;letter-spacing:-0.8px}
+.ht em{font-style:normal;color:var(--acc)}
+.hs{font-size:12px;color:var(--mu);margin-top:5px}
+
+/* Canvas */
+.cv-wrap{margin:0 16px;border-radius:14px;overflow:hidden;border:1px solid var(--bd);background:var(--s1);position:relative}
+.cv-wrap canvas{width:100%;display:block}
+.cv-over{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(5,8,14,0.7)}
+.cv-over.h{display:none}
+.pi{width:54px;height:54px;border-radius:50%;border:2px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center}
+.cv-lbl{font-size:12px;color:var(--mu)}
+
+/* Status */
+.sbar{margin:10px 16px;background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;min-height:40px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--mu);flex-shrink:0;transition:background .3s}
+.dot.go{background:var(--acc);animation:blink 1.2s infinite}
+.dot.ok{background:var(--ok)}
+.dot.er{background:var(--err)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+#stxt{font-size:12px;color:var(--mu);flex:1;line-height:1.4}
+
+/* Steps */
+.steps{margin:10px 16px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.step{background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:10px 6px;text-align:center;transition:all .25s}
+.step.go{border-color:var(--acc);background:#0a1a2e}
+.step.ok{border-color:var(--ok);background:#071a0f}
+.sn{font-size:10px;color:var(--mu);font-weight:700;margin-bottom:3px}
+.sl{font-size:11px;font-weight:500}
+.step.go .sn{color:var(--acc)}
+.step.ok .sl{color:var(--ok)}
+
+/* Panel */
+.panel{margin:10px 16px;background:var(--s1);border:1px solid var(--bd);border-radius:14px;overflow:hidden}
+.ph{padding:11px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.pt{font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;color:var(--tx)}
+.pb{padding:13px 14px}
+.eg-btn{background:none;border:none;color:var(--mu);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.eg-btn:hover{color:var(--acc)}
+
+/* Inputs */
+textarea{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:10px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:13px;padding:10px 12px;resize:none;outline:none;transition:border-color .2s;line-height:1.6}
+textarea:focus{border-color:var(--acc)}
+select{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px;padding:8px 10px;outline:none;cursor:pointer;font-family:'DM Sans',sans-serif}
+select:focus{border-color:var(--acc)}
+input[type=range]{width:100%;accent-color:var(--acc);cursor:pointer;height:4px}
+.rr{display:flex;align-items:center;gap:8px}
+.rv{font-size:11px;color:var(--acc);min-width:30px;text-align:right;font-weight:500}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sf{display:flex;flex-direction:column;gap:5px}
+.sf label{font-size:11px;color:var(--mu)}
+
+/* Voices */
+.vg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+.vb{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;cursor:pointer;text-align:left;transition:all .15s;color:var(--tx);font-family:'DM Sans',sans-serif}
+.vb:hover{border-color:var(--acc2)}
+.vb.sel{border-color:var(--acc);background:#0a1a2e}
+.vn{font-size:12px;font-weight:500}
+.vd{font-size:10px;color:var(--mu);margin-top:2px}
+
+/* Strip */
+.strip{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;scrollbar-color:var(--bd) transparent}
+.thumb{width:90px;height:56px;border-radius:8px;border:1px solid var(--bd);flex-shrink:0;background:var(--s2);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--mu);position:relative}
+.thumb.loading::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(59,130,246,.15),transparent);animation:sh 1.5s infinite}
+@keyframes sh{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}}
+
+/* Generate Button */
+.gbtn{width:calc(100% - 32px);margin:12px 16px 0;padding:15px;border:none;border-radius:14px;background:linear-gradient(135deg,#1d4ed8 0%,#0284c7 100%);color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:16px;cursor:pointer;letter-spacing:.3px;transition:opacity .2s,transform .1s;position:relative;overflow:hidden;display:block}
+.gbtn:hover{opacity:.9}
+.gbtn:active{transform:scale(.98)}
+.gbtn:disabled{opacity:.35;cursor:not-allowed}
+.gbtn .sw{position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);transform:translateX(-100%)}
+.gbtn.loading .sw{animation:slide 1.4s infinite}
 @keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}}
-.dl-row{margin:10px 16px;display:flex;gap:8px}
-.dl-btn{flex:1;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font-size:12px;font-weight:500;cursor:pointer;transition:all 0.15s;text-align:center}
-.dl-btn:hover{border-color:var(--accent);background:#0d1e38}
-.dl-btn:disabled{opacity:0.3;cursor:not-allowed}
-.footer{text-align:center;padding:24px 16px 0;font-size:11px;color:var(--muted)}
-.footer strong{color:var(--accent2)}
+
+/* Download Row */
+.dlr{margin:10px 16px;display:flex;gap:8px}
+.dlb{flex:1;padding:11px;border:1px solid var(--bd);border-radius:10px;background:var(--s1);color:var(--tx);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;text-align:center;font-family:'DM Sans',sans-serif}
+.dlb:hover{border-color:var(--acc);background:#0a1a2e}
+.dlb:disabled{opacity:.3;cursor:not-allowed}
+
+/* Progress bar */
+.prog-wrap{margin:0 16px 0;display:none}
+.prog-wrap.show{display:block}
+.prog-bar{height:3px;background:var(--bd);border-radius:2px;overflow:hidden;margin-top:6px}
+.prog-fill{height:100%;background:var(--acc);width:0%;transition:width .3s;border-radius:2px}
+.prog-txt{font-size:10px;color:var(--mu);margin-top:4px;text-align:right}
+
+.footer{text-align:center;padding:20px 16px 0;font-size:11px;color:var(--mu);line-height:1.8}
+.footer strong{color:var(--acc2)}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
 </style>
 </head>
 <body>
-<div class="studio">
+<div class="app">
 
-  <div class="topbar">
-    <div class="logo">SHIV <span>AI</span></div>
-    <div class="badge">VIDEO STUDIO PRO</div>
-  </div>
+<div class="topbar">
+  <div class="logo">SHIV <b>AI</b></div>
+  <div class="chip">VIDEO STUDIO PRO</div>
+</div>
 
-  <div class="hero">
-    <div class="hero-title">Script se<br><em>Video</em> banao</div>
-    <div class="hero-sub">Shri Ram Nag | PAISAWALA20 | Free • No API Key</div>
-  </div>
+<div class="hero">
+  <div class="ht">Script se<br><em>Video</em> banao</div>
+  <div class="hs">Shri Ram Nag · PAISAWALA20 · Free · No API Key Required</div>
+</div>
 
-  <div class="canvas-wrap">
-    <canvas id="previewCanvas" width="800" height="450"></canvas>
-    <div class="overlay" id="overlay">
-      <div class="play-icon">
-        <svg width="20" height="20" viewBox="0 0 20 20"><polygon points="6,3 17,10 6,17" fill="rgba(255,255,255,0.6)"/></svg>
-      </div>
-      <div class="overlay-label">Preview yahan aayega</div>
+<div class="cv-wrap" id="cvWrap">
+  <canvas id="cv" width="800" height="450"></canvas>
+  <div class="cv-over" id="cvo">
+    <div class="pi">
+      <svg width="20" height="20" viewBox="0 0 20 20">
+        <polygon points="6,3 17,10 6,17" fill="rgba(255,255,255,0.5)"/>
+      </svg>
     </div>
-  </div>
-
-  <div class="status-bar">
-    <div class="dot" id="dot"></div>
-    <div id="statusText">Script likhein aur Generate dabayein</div>
-  </div>
-
-  <div class="steps">
-    <div class="step" id="s1"><div class="step-num">01</div><div class="step-label">Script</div></div>
-    <div class="step" id="s2"><div class="step-num">02</div><div class="step-label">Images</div></div>
-    <div class="step" id="s3"><div class="step-num">03</div><div class="step-label">Video</div></div>
-  </div>
-
-  <!-- Script Panel -->
-  <div class="panel">
-    <div class="panel-head">
-      <div class="panel-title">📝 Script / Voiceover</div>
-      <button style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer" onclick="eg()">Example</button>
-    </div>
-    <div class="panel-body">
-      <textarea id="sc" rows="5" placeholder="Yahan Hindi ya English mein script likhein...
-
-Har sentence ek alag scene ban jayega."></textarea>
-      <div style="margin-top:6px;display:flex;justify-content:space-between">
-        <span style="font-size:11px;color:var(--muted)" id="wc">0 words</span>
-        <span style="font-size:11px;color:var(--muted)" id="scount"></span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Voice Panel -->
-  <div class="panel">
-    <div class="panel-head"><div class="panel-title">🎙️ Voice Settings</div></div>
-    <div class="panel-body">
-      <div class="voices-grid" id="vgrid"></div>
-      <div class="settings-grid">
-        <div class="setting">
-          <label>Speed</label>
-          <div class="range-row">
-            <input type="range" id="spd" min="0.5" max="2" step="0.1" value="0.9" oninput="document.getElementById('spv').textContent=this.value">
-            <span id="spv">0.9</span>
-          </div>
-        </div>
-        <div class="setting">
-          <label>Pitch</label>
-          <div class="range-row">
-            <input type="range" id="pit" min="0.5" max="2" step="0.1" value="1" oninput="document.getElementById('ptv').textContent=this.value">
-            <span id="ptv">1.0</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Video Settings Panel -->
-  <div class="panel">
-    <div class="panel-head"><div class="panel-title">🎬 Video Settings</div></div>
-    <div class="panel-body">
-      <div class="settings-grid">
-        <div class="setting">
-          <label>Image Style</label>
-          <select id="sty">
-            <option value="cinematic film still">Cinematic</option>
-            <option value="realistic photo, 8k">Realistic Photo</option>
-            <option value="anime art style">Anime</option>
-            <option value="digital concept art">Digital Art</option>
-            <option value="oil painting style">Oil Painting</option>
-            <option value="3d render, octane">3D Render</option>
-            <option value="watercolor painting">Watercolor</option>
-          </select>
-        </div>
-        <div class="setting">
-          <label>Aspect Ratio</label>
-          <select id="ar" onchange="updateRatio()">
-            <option value="16:9">16:9 YouTube</option>
-            <option value="9:16">9:16 Reels</option>
-            <option value="1:1">1:1 Square</option>
-          </select>
-        </div>
-        <div class="setting">
-          <label>FPS</label>
-          <select id="fps">
-            <option value="8">8 fps (fast)</option>
-            <option value="12" selected>12 fps (normal)</option>
-            <option value="24">24 fps (smooth)</option>
-          </select>
-        </div>
-        <div class="setting">
-          <label>Sec per Scene</label>
-          <div class="range-row">
-            <input type="range" id="dur" min="2" max="6" step="1" value="3" oninput="document.getElementById('dv').textContent=this.value+'s'">
-            <span id="dv">3s</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Image Preview Panel -->
-  <div class="panel" id="prevPanel" style="display:none">
-    <div class="panel-head">
-      <div class="panel-title">🖼️ Generated Scenes</div>
-      <span style="font-size:11px;color:var(--muted)" id="ic"></span>
-    </div>
-    <div class="panel-body">
-      <div class="img-strip" id="strip"></div>
-    </div>
-  </div>
-
-  <button class="gen-btn" id="gbtn" onclick="start()">
-    <span class="shimmer"></span>
-    ⚡ Generate Video
-  </button>
-
-  <div class="dl-row">
-    <button class="dl-btn" id="dlv" disabled onclick="dlVideo()">⬇ Download Video</button>
-    <button class="dl-btn" id="dla" disabled onclick="dlAudio()">🔊 Play Audio</button>
-  </div>
-
-  <div class="footer">
-    Free • No API Key • <strong>Pollinations.AI</strong> + Browser TTS + Canvas<br>
-    🔱 Owner: Shri Ram Nag | PAISAWALA20
+    <div class="cv-lbl">Preview yahan dikhega</div>
   </div>
 </div>
 
-<script>
-// ── State ──────────────────────────────────────────
-const VOICES=[
-  {id:'hm',name:'Shiv (Hindi M)',desc:'Hindi Male',lang:'hi-IN'},
-  {id:'hf',name:'Devi (Hindi F)',desc:'Hindi Female',lang:'hi-IN'},
-  {id:'em',name:'Arjun (Eng M)',desc:'English Male',lang:'en-US'},
-  {id:'ef',name:'Priya (Eng F)',desc:'English Female',lang:'en-US'},
-];
-let selV=VOICES[0], imgs=[], frames=[], recording=false;
+<div class="sbar"><div class="dot" id="dot"></div><div id="stxt">Script likhein aur Generate karein</div></div>
 
-// ── Init ───────────────────────────────────────────
+<div class="steps">
+  <div class="step" id="st1"><div class="sn">01</div><div class="sl">Script</div></div>
+  <div class="step" id="st2"><div class="sn">02</div><div class="sl">Images</div></div>
+  <div class="step" id="st3"><div class="sn">03</div><div class="sl">Video</div></div>
+</div>
+
+<div class="prog-wrap" id="pw">
+  <div class="prog-bar"><div class="prog-fill" id="pf"></div></div>
+  <div class="prog-txt" id="pt">0%</div>
+</div>
+
+<!-- Script Panel -->
+<div class="panel">
+  <div class="ph">
+    <div class="pt">📝 Script / Voiceover Text</div>
+    <button class="eg-btn" onclick="loadEg()">Example load karo ↗</button>
+  </div>
+  <div class="pb">
+    <textarea id="sc" rows="5" placeholder="Yahan Hindi ya English mein script likhein...
+
+Har sentence automatically ek alag scene ban jayega.
+Jitne zyada sentences, utne zyada scenes!"></textarea>
+    <div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:11px;color:var(--mu)" id="wc">0 words</span>
+      <span style="font-size:11px;color:var(--acc2)" id="sc2"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Voice Panel -->
+<div class="panel">
+  <div class="ph"><div class="pt">🎙️ Voice Settings</div></div>
+  <div class="pb">
+    <div class="vg" id="vg"></div>
+    <div class="sg">
+      <div class="sf">
+        <label>Speed</label>
+        <div class="rr">
+          <input type="range" id="spd" min="0.5" max="1.8" step="0.1" value="0.85"
+            oninput="document.getElementById('spv').textContent=parseFloat(this.value).toFixed(1)">
+          <span class="rv" id="spv">0.9</span>
+        </div>
+      </div>
+      <div class="sf">
+        <label>Pitch</label>
+        <div class="rr">
+          <input type="range" id="pit" min="0.5" max="2" step="0.1" value="1"
+            oninput="document.getElementById('ptv').textContent=parseFloat(this.value).toFixed(1)">
+          <span class="rv" id="ptv">1.0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Video Settings Panel -->
+<div class="panel">
+  <div class="ph"><div class="pt">🎬 Video Settings</div></div>
+  <div class="pb">
+    <div class="sg">
+      <div class="sf">
+        <label>Image Style</label>
+        <select id="sty">
+          <option value="cinematic film still, dramatic lighting">Cinematic</option>
+          <option value="realistic photo, 8k, DSLR">Realistic Photo</option>
+          <option value="anime art, Studio Ghibli style">Anime</option>
+          <option value="digital concept art, vivid colors">Digital Art</option>
+          <option value="oil painting, impressionist">Oil Painting</option>
+          <option value="3d render, octane render, photorealistic">3D Render</option>
+          <option value="watercolor painting, soft edges">Watercolor</option>
+          <option value="ancient Indian art, Mughal miniature style">Indian Art</option>
+        </select>
+      </div>
+      <div class="sf">
+        <label>Aspect Ratio</label>
+        <select id="ar" onchange="updateRatio()">
+          <option value="16:9">16:9 YouTube</option>
+          <option value="9:16">9:16 Reels</option>
+          <option value="1:1">1:1 Square</option>
+        </select>
+      </div>
+      <div class="sf">
+        <label>FPS</label>
+        <select id="fps">
+          <option value="8">8 fps — Fast</option>
+          <option value="12" selected>12 fps — Normal</option>
+          <option value="24">24 fps — Smooth</option>
+        </select>
+      </div>
+      <div class="sf">
+        <label>Seconds / Scene</label>
+        <div class="rr">
+          <input type="range" id="dur" min="2" max="7" step="1" value="3"
+            oninput="document.getElementById('dv').textContent=this.value+'s'">
+          <span class="rv" id="dv">3s</span>
+        </div>
+      </div>
+    </div>
+    <!-- Ken Burns toggle -->
+    <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="kb" checked style="accent-color:var(--acc);width:14px;height:14px">
+      <label for="kb" style="font-size:12px;color:var(--mu);cursor:pointer">Ken Burns effect (slow zoom)</label>
+    </div>
+  </div>
+</div>
+
+<!-- Scene Preview Panel -->
+<div class="panel" id="prevP" style="display:none">
+  <div class="ph">
+    <div class="pt">🖼️ Scene Images</div>
+    <span style="font-size:11px;color:var(--mu)" id="ic"></span>
+  </div>
+  <div class="pb">
+    <div class="strip" id="strip"></div>
+  </div>
+</div>
+
+<button class="gbtn" id="gbtn" onclick="startGen()">
+  <span class="sw"></span>
+  ⚡ Generate Video
+</button>
+
+<div class="dlr">
+  <button class="dlb" id="dlv" disabled onclick="doDownload()">⬇ Download Video</button>
+  <button class="dlb" id="dla" disabled onclick="playAudio()">🔊 Play Voiceover</button>
+</div>
+
+<div class="footer">
+  <strong>Pollinations.AI</strong> · Browser TTS · Canvas API · 100% Free<br>
+  🔱 Shri Ram Nag · PAISAWALA20
+</div>
+
+</div><!-- /app -->
+
+<script>
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+const VOICES=[
+  {id:'hm',name:'Shiv (Hindi)',  desc:'Hindi Male',  lang:'hi-IN',gender:'male'},
+  {id:'hf',name:'Devi (Hindi)',  desc:'Hindi Female', lang:'hi-IN',gender:'female'},
+  {id:'em',name:'Arjun (Eng)',   desc:'English Male', lang:'en-US',gender:'male'},
+  {id:'ef',name:'Priya (Eng)',   desc:'English Female',lang:'en-US',gender:'female'},
+];
+let selV=VOICES[0];
+let genImgs=[];    // HTMLImageElement per scene
+let genScenes=[];  // scene text per scene
+let isGen=false;
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
 function initVoices(){
-  const g=document.getElementById('vgrid');
-  g.innerHTML='';
+  const g=document.getElementById('vg'); g.innerHTML='';
   VOICES.forEach(v=>{
     const b=document.createElement('button');
-    b.className='vbtn'+(v.id===selV.id?' sel':'');
+    b.className='vb'+(v.id===selV.id?' sel':'');
     b.innerHTML=`<div class="vn">${v.name}</div><div class="vd">${v.desc}</div>`;
     b.onclick=()=>{selV=v;initVoices()};
     g.appendChild(b);
   });
 }
-
 function updateRatio(){
-  const c=document.getElementById('previewCanvas');
-  const r=document.getElementById('ar').value;
-  if(r==='9:16'){c.width=450;c.height=800;}
-  else if(r==='1:1'){c.width=600;c.height=600;}
+  const c=document.getElementById('cv');
+  const ar=document.getElementById('ar').value;
+  if(ar==='9:16'){c.width=450;c.height=800;}
+  else if(ar==='1:1'){c.width=600;c.height=600;}
   else{c.width=800;c.height=450;}
+  blackCanvas();
 }
-
-function eg(){
+function blackCanvas(){
+  const c=document.getElementById('cv');
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#05080e';
+  ctx.fillRect(0,0,c.width,c.height);
+}
+function loadEg(){
   document.getElementById('sc').value=
-    'भारत माता की जय। हमारे देश में अनेक नदियाँ और पहाड़ हैं। यहाँ के लोग परिश्रमी और साहसी हैं। शिव की कृपा से यह देश सदा उन्नति करे।';
+    'जय श्री राम। भारत एक महान देश है। यहाँ की नदियाँ और पहाड़ बहुत सुंदर हैं। शिव की कृपा से यह देश हमेशा उन्नति करे। जय हिंद।';
   upWC();
 }
-
 function upWC(){
   const t=document.getElementById('sc').value.trim();
   const wc=t?t.split(/\s+/).length:0;
   document.getElementById('wc').textContent=wc+' words';
   const sc=splitScenes(t);
-  document.getElementById('scount').textContent=t?sc.length+' scenes':'';
+  document.getElementById('sc2').textContent=t?(sc.length+' scenes'):'';
 }
 document.getElementById('sc').oninput=upWC;
 
-// ── Helpers ────────────────────────────────────────
-function setStatus(msg,state='active'){
-  document.getElementById('statusText').textContent=msg;
+// ═══════════════════════════════════════════
+//  STATUS / STEP HELPERS
+// ═══════════════════════════════════════════
+function setS(msg,state='go'){
+  document.getElementById('stxt').textContent=msg;
   document.getElementById('dot').className='dot '+state;
 }
-function setStep(n,st){document.getElementById('s'+n).className='step '+st;}
+function setStep(n,st){document.getElementById('st'+n).className='step '+st;}
+function setProgress(pct,label){
+  const pw=document.getElementById('pw');
+  pw.classList.add('show');
+  document.getElementById('pf').style.width=pct+'%';
+  document.getElementById('pt').textContent=label||Math.round(pct)+'%';
+}
+function hideProgress(){document.getElementById('pw').classList.remove('show');}
 
+// ═══════════════════════════════════════════
+//  SCENE SPLITTING
+// ═══════════════════════════════════════════
 function splitScenes(text){
   if(!text.trim())return[];
-  const s=text.replace(/([।\.!\?])\s+/g,'$1|||').split('|||').filter(x=>x.trim().length>2);
-  if(s.length<=1)return[text.trim()];
+  // Split on sentence-ending punctuation
+  const raw=text
+    .replace(/([।\.!\?؟])\s*/g,'$1|||')
+    .split('|||')
+    .map(s=>s.trim())
+    .filter(s=>s.length>2);
+  if(!raw.length)return[text.trim()];
+  // Merge very short fragments
   const out=[];
-  for(let i=0;i<s.length;i+=2){
-    const c=s.slice(i,i+2).join(' ').trim();
-    if(c)out.push(c);
+  let buf='';
+  for(const s of raw){
+    buf+=(buf?' ':'')+s;
+    if(buf.split(/\s+/).length>=4){out.push(buf);buf='';}
   }
+  if(buf)out.push(buf);
   return out;
 }
 
-function makePrompt(scene,style){
-  const clean=scene.replace(/[।!?\.]/g,'').substring(0,120).trim();
-  return `${clean}, ${style}, highly detailed, vivid colors, professional`;
+// ═══════════════════════════════════════════
+//  IMAGE LOADING — multi-fallback, CORS safe
+// ═══════════════════════════════════════════
+function buildImgUrl(prompt,w,h,seed,service){
+  const ep=encodeURIComponent(prompt);
+  if(service===0)
+    return `https://image.pollinations.ai/prompt/${ep}?width=${w}&height=${h}&nologo=true&seed=${seed}&model=flux`;
+  if(service===1)
+    return `https://image.pollinations.ai/prompt/${ep}?width=${w}&height=${h}&nologo=true&seed=${seed+1}&model=turbo`;
+  // service 2: smaller size fallback
+  return `https://image.pollinations.ai/prompt/${ep}?width=${Math.min(w,512)}&height=${Math.min(h,512)}&nologo=true&seed=${seed+2}`;
 }
 
-async function fetchImg(prompt){
-  const seed=Math.floor(Math.random()*99999);
-  const c=document.getElementById('previewCanvas');
-  const W=c.width,H=c.height;
-  const url=`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${W}&height=${H}&nologo=true&seed=${seed}`;
+function loadImg(url){
   return new Promise((res,rej)=>{
     const img=new Image();
     img.crossOrigin='anonymous';
-    img.onload=()=>res(img);
-    img.onerror=()=>rej(new Error('Image failed'));
+    const tid=setTimeout(()=>rej(new Error('timeout')),40000);
+    img.onload=()=>{clearTimeout(tid);res(img);};
+    img.onerror=()=>{clearTimeout(tid);rej(new Error('load error'));};
     img.src=url;
-    setTimeout(()=>rej(new Error('Timeout')),35000);
   });
 }
 
-function drawFrame(img,canvas,f,total,text){
-  const ctx=canvas.getContext('2d');
-  const W=canvas.width,H=canvas.height;
-  const p=f/total;
-  const sc=1+p*0.035;
+async function fetchSceneImg(prompt,w,h){
+  const seed=Math.floor(Math.random()*99999);
+  for(let s=0;s<3;s++){
+    try{
+      const url=buildImgUrl(prompt,w,h,seed,s);
+      const img=await loadImg(url);
+      return img;
+    }catch(e){
+      await sleep(800);
+    }
+  }
+  // Return null — draw placeholder
+  return null;
+}
+
+function makePrompt(scene,style){
+  const clean=scene.replace(/[।!?\.]/g,'').substring(0,100).trim();
+  return `${clean}, ${style}, high quality, detailed, vibrant`;
+}
+
+// ═══════════════════════════════════════════
+//  CANVAS DRAWING
+// ═══════════════════════════════════════════
+function drawFrame(ctx,img,W,H,frameIdx,totalFrames,sceneText,kenBurns){
+  const p=totalFrames>1?frameIdx/(totalFrames-1):0;
   ctx.clearRect(0,0,W,H);
-  ctx.save();
-  ctx.translate(-(W*(sc-1))/2,-(H*(sc-1))/2);
-  ctx.scale(sc,sc);
-  ctx.drawImage(img,0,0,W,H);
-  ctx.restore();
-  // Gradient overlay bottom
-  const grd=ctx.createLinearGradient(0,H*0.55,0,H);
-  grd.addColorStop(0,'rgba(0,0,0,0)');
-  grd.addColorStop(1,'rgba(0,0,0,0.75)');
-  ctx.fillStyle=grd;
-  ctx.fillRect(0,0,W,H);
+
+  if(img){
+    if(kenBurns){
+      const sc=1+p*0.04;
+      const dx=-(W*(sc-1))/2 * (0.5+p*0.5);
+      const dy=-(H*(sc-1))/2;
+      ctx.save();
+      ctx.translate(dx,dy);
+      ctx.scale(sc,sc);
+      ctx.drawImage(img,0,0,W,H);
+      ctx.restore();
+    }else{
+      ctx.drawImage(img,0,0,W,H);
+    }
+  }else{
+    // Placeholder gradient
+    const gp=ctx.createLinearGradient(0,0,W,H);
+    gp.addColorStop(0,'#0a1628');gp.addColorStop(1,'#050810');
+    ctx.fillStyle=gp;ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='rgba(59,130,246,0.08)';
+    ctx.beginPath();ctx.arc(W/2,H/2,Math.min(W,H)*0.3,0,Math.PI*2);ctx.fill();
+  }
+
+  // Bottom gradient
+  const grad=ctx.createLinearGradient(0,H*0.5,0,H);
+  grad.addColorStop(0,'rgba(0,0,0,0)');
+  grad.addColorStop(1,'rgba(0,0,0,0.82)');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+
   // Subtitle
-  ctx.font=`500 ${Math.round(W*0.028)}px DM Sans, sans-serif`;
+  const fs=Math.max(14,Math.round(W*0.027));
+  ctx.font=`500 ${fs}px DM Sans, sans-serif`;
   ctx.fillStyle='rgba(255,255,255,0.95)';
   ctx.textAlign='center';
-  ctx.shadowColor='rgba(0,0,0,0.9)';
-  ctx.shadowBlur=10;
-  const mw=W-W*0.1;
-  const words=text.split(' ');
+  ctx.shadowColor='rgba(0,0,0,0.95)';
+  ctx.shadowBlur=12;
+
+  const maxW=W*0.88;
+  const words=sceneText.split(' ');
   let line='',lines=[];
   for(const w of words){
-    if(ctx.measureText(line+w).width>mw){lines.push(line.trim());line='';}
-    line+=w+' ';
+    const test=line+(line?' ':'')+w;
+    if(ctx.measureText(test).width>maxW && line){lines.push(line);line=w;}
+    else{line=test;}
   }
-  if(line.trim())lines.push(line.trim());
-  lines.slice(0,2).forEach((l,i)=>{
-    ctx.fillText(l,W/2,H-H*0.08+i*H*0.045);
-  });
+  if(line)lines.push(line);
+  const lh=fs*1.45;
+  const startY=H-lh*(lines.length)+fs*0.4-12;
+  lines.slice(0,3).forEach((l,i)=>ctx.fillText(l,W/2,startY+i*lh));
   ctx.shadowBlur=0;
+
   // Progress bar
-  ctx.fillStyle='rgba(255,255,255,0.15)';
+  ctx.fillStyle='rgba(255,255,255,0.08)';
   ctx.fillRect(0,H-3,W,3);
   ctx.fillStyle='#3b82f6';
   ctx.fillRect(0,H-3,W*p,3);
+
+  // Watermark
+  ctx.font=`400 ${Math.max(9,Math.round(W*0.018))}px DM Sans`;
+  ctx.fillStyle='rgba(255,255,255,0.25)';
+  ctx.textAlign='right';
+  ctx.fillText('🔱 SHIV AI · PAISAWALA20',W-10,16);
+  ctx.textAlign='center';
 }
 
-async function speakText(text){
-  return new Promise(res=>{
-    speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(text);
-    u.rate=parseFloat(document.getElementById('spd').value);
-    u.pitch=parseFloat(document.getElementById('pit').value);
-    u.lang=selV.lang;
-    const allV=speechSynthesis.getVoices();
-    const match=allV.find(v=>v.lang.startsWith(selV.lang.split('-')[0]));
-    if(match)u.voice=match;
-    u.onend=res;u.onerror=res;
-    speechSynthesis.speak(u);
-  });
+function addThumb(img,sceneIdx){
+  const strip=document.getElementById('strip');
+  const wrap=document.createElement('div');
+  wrap.className='thumb';
+  if(img){
+    const tc=document.createElement('canvas');
+    tc.width=90;tc.height=56;
+    tc.style.cssText='width:90px;height:56px;display:block';
+    tc.getContext('2d').drawImage(img,0,0,90,56);
+    wrap.appendChild(tc);
+  }else{
+    wrap.innerHTML='<span style="color:var(--err);font-size:16px">✗</span>';
+  }
+  strip.appendChild(wrap);
 }
 
-// ── Main Generate ──────────────────────────────────
-async function start(){
+// ═══════════════════════════════════════════
+//  MAIN GENERATE
+// ═══════════════════════════════════════════
+async function startGen(){
+  if(isGen)return;
   const script=document.getElementById('sc').value.trim();
-  if(!script){setStatus('Script likhein pehle!','error');return;}
+  if(!script){setS('Script likhein pehle!','er');return;}
 
+  const scenes=splitScenes(script);
+  if(!scenes.length){setS('Valid script likhein','er');return;}
+
+  isGen=true;
+  genImgs=[];genScenes=scenes;
   const btn=document.getElementById('gbtn');
-  btn.disabled=true;
-  btn.classList.add('loading');
-  btn.querySelector('span+*')
+  btn.disabled=true;btn.classList.add('loading');
   btn.childNodes[1].textContent=' Generating...';
-
   document.getElementById('dlv').disabled=true;
   document.getElementById('dla').disabled=true;
-  document.getElementById('overlay').classList.add('hidden');
-  imgs=[];frames=[];
+  document.getElementById('cvo').classList.add('h');
 
   const style=document.getElementById('sty').value;
   const fps=parseInt(document.getElementById('fps').value);
   const dur=parseInt(document.getElementById('dur').value);
-  const scenes=splitScenes(script);
-  const FPS_FRAMES=fps*dur;
+  const kb=document.getElementById('kb').checked;
+  const cv=document.getElementById('cv');
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  const FPF=fps*dur;  // frames per scene
 
-  setStep(1,'active');setStep(2,'');setStep(3,'');
-  setStatus(`Script → ${scenes.length} scenes`);
-  await sleep(500);
-  setStep(1,'done');setStep(2,'active');
+  // ── Step 1: Script parsed
+  setStep(1,'go');setStep(2,'');setStep(3,'');
+  setS(`Script → ${scenes.length} scenes`);
+  setProgress(5,'Parsing...');
+  await sleep(400);
+  setStep(1,'ok');
 
-  // Show preview panel
-  document.getElementById('prevPanel').style.display='block';
+  // ── Step 2: Generate images
+  setStep(2,'go');
+  document.getElementById('prevP').style.display='block';
   document.getElementById('strip').innerHTML='';
   document.getElementById('ic').textContent=scenes.length+' scenes';
 
-  const canvas=document.getElementById('previewCanvas');
-
-  // Generate images
   for(let i=0;i<scenes.length;i++){
-    setStatus(`Image ${i+1}/${scenes.length} generate ho rahi hai...`);
-    const thumb=document.createElement('div');
-    thumb.className='thumb loading';
-    thumb.textContent='⏳';
-    document.getElementById('strip').appendChild(thumb);
-    try{
-      const prompt=makePrompt(scenes[i],style);
-      const img=await fetchImg(prompt);
-      imgs.push(img);
-      thumb.classList.remove('loading');
-      thumb.textContent='';
+    const pct=10+Math.round((i/scenes.length)*50);
+    setS(`Image ${i+1}/${scenes.length} generate ho rahi hai...`);
+    setProgress(pct,`Image ${i+1}/${scenes.length}`);
+
+    // Show loading thumb
+    const strip=document.getElementById('strip');
+    const wrap=document.createElement('div');
+    wrap.className='thumb loading';
+    wrap.innerHTML='<span style="font-size:10px;color:var(--mu)">⏳</span>';
+    strip.appendChild(wrap);
+
+    const prompt=makePrompt(scenes[i],style);
+    const img=await fetchSceneImg(prompt,W,H);
+    genImgs.push(img);
+
+    // Update thumb
+    wrap.classList.remove('loading');
+    wrap.innerHTML='';
+    if(img){
       const tc=document.createElement('canvas');
-      tc.width=88;tc.height=56;
-      tc.getContext('2d').drawImage(img,0,0,88,56);
-      tc.style.cssText='width:88px;height:56px;display:block';
-      thumb.appendChild(tc);
+      tc.width=90;tc.height=56;tc.style.cssText='width:90px;height:56px;display:block';
+      tc.getContext('2d').drawImage(img,0,0,90,56);
+      wrap.appendChild(tc);
       // Show on main canvas
-      drawFrame(img,canvas,0,FPS_FRAMES,scenes[i]);
-    }catch(e){
-      imgs.push(null);
-      thumb.classList.remove('loading');
-      thumb.style.background='#1a0a0a';
-      thumb.innerHTML='<span style="color:#ef4444;font-size:10px">❌</span>';
+      drawFrame(ctx,img,W,H,0,FPF,scenes[i],kb);
+    }else{
+      wrap.innerHTML='<span style="color:var(--err);font-size:16px">✗</span>';
     }
   }
 
-  setStep(2,'done');setStep(3,'active');
-  setStatus('Video frames render ho rahe hain...');
+  setStep(2,'ok');
 
-  // Render all frames to canvas sequentially
+  // ── Step 3: Render preview animation
+  setStep(3,'go');
+  setS('Video preview render ho raha hai...');
+
+  let totalF=scenes.length*FPF;
+  let done=0;
   for(let i=0;i<scenes.length;i++){
-    if(!imgs[i])continue;
-    for(let f=0;f<FPS_FRAMES;f++){
-      drawFrame(imgs[i],canvas,f,FPS_FRAMES,scenes[i]);
-      if(f%4===0){
-        setStatus(`Rendering scene ${i+1}/${scenes.length} — frame ${f+1}/${FPS_FRAMES}`);
+    for(let f=0;f<FPF;f++){
+      drawFrame(ctx,genImgs[i]||null,W,H,f,FPF,scenes[i],kb);
+      done++;
+      if(f%Math.max(1,Math.floor(FPF/6))===0){
+        const pct=60+Math.round((done/totalF)*38);
+        setProgress(pct,`Rendering ${Math.round(done/totalF*100)}%`);
         await sleep(1);
       }
     }
   }
 
-  setStep(3,'done');
-  setStatus('Ready! Download karo 🎉','done');
+  setStep(3,'ok');
+  setProgress(100,'Complete!');
+  setS('Video ready hai! Download karo 🎉','ok');
+
   document.getElementById('dlv').disabled=false;
   document.getElementById('dla').disabled=false;
-
-  btn.disabled=false;
-  btn.classList.remove('loading');
+  isGen=false;
+  btn.disabled=false;btn.classList.remove('loading');
   btn.childNodes[1].textContent=' Generate Again';
+
+  await sleep(2000);
+  hideProgress();
 }
 
-// ── Download Video (WebM via MediaRecorder) ────────
-async function dlVideo(){
-  if(!imgs.length){setStatus('Pehle generate karo!','error');return;}
-  const canvas=document.getElementById('previewCanvas');
+// ═══════════════════════════════════════════
+//  VIDEO DOWNLOAD (MediaRecorder)
+// ═══════════════════════════════════════════
+async function doDownload(){
+  if(!genImgs.length){setS('Pehle generate karo!','er');return;}
+  const cv=document.getElementById('cv');
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
   const fps=parseInt(document.getElementById('fps').value);
   const dur=parseInt(document.getElementById('dur').value);
-  const scenes=splitScenes(document.getElementById('sc').value.trim());
-  const FPS_FRAMES=fps*dur;
-  let stream,rec,chunks=[];
-  const mimeTypes=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+  const kb=document.getElementById('kb').checked;
+  const FPF=fps*dur;
+
+  // Pick best supported mime
+  const mimes=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'];
   let mime='video/webm';
-  for(const m of mimeTypes){if(MediaRecorder.isTypeSupported(m)){mime=m;break;}}
-  try{stream=canvas.captureStream(fps);}
-  catch(e){setStatus('captureStream not supported — Chrome use karein','error');return;}
-  rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:4000000});
+  for(const m of mimes){try{if(MediaRecorder.isTypeSupported(m)){mime=m;break;}}catch(e){}}
+
+  let stream;
+  try{stream=cv.captureStream(fps);}
+  catch(e){setS('captureStream nahi chala — Chrome use karein','er');return;}
+
+  const chunks=[];
+  const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:5000000});
   rec.ondataavailable=e=>{if(e.data&&e.data.size>0)chunks.push(e.data);};
   rec.onstop=()=>{
     const blob=new Blob(chunks,{type:mime});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
-    a.href=url;a.download='ShivAI_Video.webm';
+    a.href=url;
+    a.download='ShivAI_Video_'+Date.now()+'.webm';
     document.body.appendChild(a);a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    setStatus('Video downloaded! ✅','done');
+    setS('Video download ho gayi! ✅','ok');
   };
+
   rec.start(100);
-  setStatus('Recording video...');
-  for(let i=0;i<scenes.length;i++){
-    if(!imgs[i])continue;
-    for(let f=0;f<FPS_FRAMES;f++){
-      drawFrame(imgs[i],canvas,f,FPS_FRAMES,scenes[i]);
+  setS('Recording video...','go');
+  setProgress(0,'Recording...');
+
+  let total=genScenes.length*FPF,done=0;
+  for(let i=0;i<genScenes.length;i++){
+    for(let f=0;f<FPF;f++){
+      drawFrame(ctx,genImgs[i]||null,W,H,f,FPF,genScenes[i],kb);
       await sleep(Math.round(1000/fps));
+      done++;
+      setProgress(Math.round(done/total*100));
     }
   }
   rec.stop();
+  hideProgress();
 }
 
-async function dlAudio(){
+// ═══════════════════════════════════════════
+//  VOICEOVER (Browser TTS)
+// ═══════════════════════════════════════════
+async function playAudio(){
   const sc=document.getElementById('sc').value.trim();
-  if(!sc){setStatus('Script nahi hai!','error');return;}
-  setStatus('Voice over play ho rahi hai...','active');
-  await speakText(sc);
-  setStatus('Audio play hua!','done');
+  if(!sc){setS('Script nahi hai!','er');return;}
+  speechSynthesis.cancel();
+  await sleep(200);
+  const u=new SpeechSynthesisUtterance(sc);
+  u.rate=parseFloat(document.getElementById('spd').value);
+  u.pitch=parseFloat(document.getElementById('pit').value);
+  u.lang=selV.lang;
+  const allV=speechSynthesis.getVoices();
+  const match=allV.find(v=>v.lang&&v.lang.startsWith(selV.lang.split('-')[0]));
+  if(match)u.voice=match;
+  u.onstart=()=>setS('Voice over play ho rahi hai...','go');
+  u.onend=()=>setS('Voice over complete! ✅','ok');
+  u.onerror=()=>setS('Voice over mein error — browser TTS check karein','er');
+  speechSynthesis.speak(u);
 }
 
+// ═══════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
-// ── Boot ───────────────────────────────────────────
+// ── Boot ──────────────────────────────────
 initVoices();
-speechSynthesis.getVoices();
-window.speechSynthesis.onvoiceschanged=initVoices;
+blackCanvas();
+// Pre-load voices
+if(speechSynthesis.getVoices().length===0){
+  speechSynthesis.addEventListener('voiceschanged',initVoices,{once:true});
+}
 </script>
 </body>
 </html>
 """
 
-# ── Gradio Wrapper ─────────────────────────────────
-with gr.Blocks(title="Shiv AI Video Studio", theme=gr.themes.Base()) as demo:
-    gr.HTML("""
-    <style>
-    body, .gradio-container { background: #070a0f !important; padding: 0 !important; margin: 0 !important; }
+# ── Gradio App ─────────────────────────────────────
+with gr.Blocks(
+    title="🔱 Shiv AI Video Studio",
+    theme=gr.themes.Base(),
+    css="""
+    body, .gradio-container, .main, .wrap {
+        background: #05080e !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+    }
     footer { display: none !important; }
-    .contain { padding: 0 !important; }
-    </style>
-    """)
+    .contain, .gap { padding: 0 !important; gap: 0 !important; }
+    #component-0 { padding: 0 !important; }
+    """
+) as demo:
     gr.HTML(HTML_UI)
 
 if __name__ == "__main__":
@@ -545,5 +737,6 @@ if __name__ == "__main__":
         share=True,
         server_name="0.0.0.0",
         server_port=7860,
-        show_error=True
+        show_error=True,
+        quiet=False
     )
